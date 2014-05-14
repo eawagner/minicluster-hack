@@ -221,7 +221,8 @@ public class MiniCluster {
 
     System.out.println();
     System.out.println("  To connect with shell, use the following command : ");
-    System.out.println("    accumulo shell -zh " + "localhost:" + accumulo.getConfig().getZooKeeperPort() + " -zi " + accumulo.getConfig().getInstanceName() + " -u root ");
+    System.out.println("    accumulo shell -z "+accumulo.getConfig().getInstanceName()+" localhost:"+accumulo.getConfig().getZooKeeperPort()+" -u root -p "+accumulo.getConfig().getRootPassword()+"");
+
 
     System.out.println("\n\nSuccessfully started on " + new Date());
   }

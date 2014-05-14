@@ -131,6 +131,9 @@ public class MiniAccumuloCluster {
         String env = System.getenv("HADOOP_PREFIX");
         if (env != null)
             builder.environment().put("HADOOP_PREFIX", env);
+        env = System.getenv("HADOOP_HOME");
+        if (env != null)
+            builder.environment().put("HADOOP_HOME", env);
         env = System.getenv("ZOOKEEPER_HOME");
         if (env != null)
             builder.environment().put("ZOOKEEPER_HOME", env);
@@ -200,6 +203,10 @@ public class MiniAccumuloCluster {
         walogDir.mkdirs();
         libDir.mkdirs();
 
+        File accumuloLibDir = new File(System.getenv("ACCUMULO_HOME") + "/lib/");
+
+        copyFileOrDirectory(accumuloLibDir,libDir);
+
         instanceName = config.getInstanceName();
 
         File siteFile = new File(confDir, "accumulo-site.xml");
@@ -228,11 +235,13 @@ public class MiniAccumuloCluster {
         appendProp(fileWriter, Property.TSERV_MAJC_DELAY, "3", siteConfig);
         String cp = System.getenv("ACCUMULO_HOME") + "/lib/.*.jar,"
                 + System.getenv("ACCUMULO_HOME") + "/lib/ext/.*.jar,"
-                + "$ZOOKEEPER_HOME/zookeeper[^.].*.jar," + "$HADOOP_HOME/[^.].*.jar,"
-                + "$HADOOP_HOME/lib/[^.].*.jar," + "$HADOOP_PREFIX/share/hadoop/common/.*.jar,"
-                + "$HADOOP_PREFIX/share/hadoop/common/lib/.*.jar,"
-                + "$HADOOP_PREFIX/share/hadoop/hdfs/.*.jar,"
-                + "$HADOOP_PREFIX/share/hadoop/mapreduce/.*.jar";
+                + System.getenv("ZOOKEEPER_HOME") + "/zookeeper[^.].*.jar,"
+                + System.getenv("HADOOP_HOME") + "/[^.].*.jar,"
+                + System.getenv("HADOOP_HOME") + "/lib/[^.].*.jar,"
+                + System.getenv("HADOOP_PREFIX") + "/share/hadoop/common/.*.jar,"
+                + System.getenv("HADOOP_PREFIX") + "/share/hadoop/common/lib/.*.jar,"
+                + System.getenv("HADOOP_PREFIX") + "/share/hadoop/hdfs/.*.jar,"
+                + System.getenv("HADOOP_PREFIX") + "/share/hadoop/mapreduce/.*.jar";
         appendProp(fileWriter, Property.GENERAL_CLASSPATHS, cp, siteConfig);
         appendProp(fileWriter, Property.GENERAL_DYNAMIC_CLASSPATHS, libDir.getAbsolutePath(), siteConfig);
 
@@ -257,6 +266,43 @@ public class MiniAccumuloCluster {
         fileWriter.close();
 
     }
+
+    public static void copyFileOrDirectory(File src, File dest)
+            throws IOException{
+
+        if(src.isDirectory()){
+
+            //if directory not exists, create it
+            if(!dest.exists()){
+                dest.mkdir();
+         }
+
+            for (String file :  src.list()) {
+                //construct the src and dest file structure
+                File srcFile = new File(src, file);
+                File destFile = new File(dest, file);
+                //recursive copy
+                copyFileOrDirectory(srcFile, destFile);
+            }
+
+        }else{
+            //if file, then copy it
+            //Use bytes stream to support all file types
+            InputStream in = new FileInputStream(src);
+            OutputStream out = new FileOutputStream(dest);
+
+            byte[] buffer = new byte[1024];
+
+            int length;
+            //copy the file content in bytes
+            while ((length = in.read(buffer)) > 0){
+                out.write(buffer, 0, length);
+            }
+            in.close();
+            out.close();
+        }
+    }
+
 
     /**
      * Starts Accumulo and Zookeeper processes. Can only be called once.
@@ -289,7 +335,7 @@ public class MiniAccumuloCluster {
         // sleep a little bit to let zookeeper come up before calling init, seems to work better
         UtilWaitThread.sleep(250);
 
-        Process initProcess = exec(Initialize.class, "--instance-name", instanceName, "--password", config.getRootPassword(), "--username", "root");
+        Process initProcess = exec(Initialize.class, "--instance-name", instanceName, "--password", config.getRootPassword());
         int ret = initProcess.waitFor();
         if (ret != 0) {
             throw new RuntimeException("Initialize process returned " + ret);
