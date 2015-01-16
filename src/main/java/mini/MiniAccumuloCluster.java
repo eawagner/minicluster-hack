@@ -124,7 +124,7 @@ public class MiniAccumuloCluster {
 
         ProcessBuilder builder = new ProcessBuilder(argList);
 
-        builder.environment().put("ACCUMULO_HOME", config.getDir().getAbsolutePath());
+        builder.environment().put("ACCUMULO_HOME", System.getenv("ACCUMULO_HOME"));
         builder.environment().put("ACCUMULO_LOG_DIR", logDir.getAbsolutePath());
 
         // if we're running under accumulo.start, we forward these env vars
@@ -203,10 +203,6 @@ public class MiniAccumuloCluster {
         walogDir.mkdirs();
         libDir.mkdirs();
 
-        File accumuloLibDir = new File(System.getenv("ACCUMULO_HOME") + "/lib/");
-
-        copyFileOrDirectory(accumuloLibDir,libDir);
-
         instanceName = config.getInstanceName();
 
         File siteFile = new File(confDir, "accumulo-site.xml");
@@ -233,15 +229,15 @@ public class MiniAccumuloCluster {
         appendProp(fileWriter, Property.TRACE_PORT, "" + PortUtils.getRandomFreePort(), siteConfig);
         // since there is a small amount of memory, check more frequently for majc... setting may not be needed in 1.5
         appendProp(fileWriter, Property.TSERV_MAJC_DELAY, "3", siteConfig);
-        String cp = System.getenv("ACCUMULO_HOME") + "/lib/.*.jar,"
-                + System.getenv("ACCUMULO_HOME") + "/lib/ext/.*.jar,"
+        String cp = System.getenv("ACCUMULO_HOME") + "/lib/[^.].*.jar"
+                + System.getenv("ACCUMULO_HOME") + "/lib/ext/[^.].*.jar,"
                 + System.getenv("ZOOKEEPER_HOME") + "/zookeeper[^.].*.jar,"
                 + System.getenv("HADOOP_HOME") + "/[^.].*.jar,"
                 + System.getenv("HADOOP_HOME") + "/lib/[^.].*.jar,"
-                + System.getenv("HADOOP_PREFIX") + "/share/hadoop/common/.*.jar,"
-                + System.getenv("HADOOP_PREFIX") + "/share/hadoop/common/lib/.*.jar,"
-                + System.getenv("HADOOP_PREFIX") + "/share/hadoop/hdfs/.*.jar,"
-                + System.getenv("HADOOP_PREFIX") + "/share/hadoop/mapreduce/.*.jar";
+                + System.getenv("HADOOP_PREFIX") + "/share/hadoop/common/[^.].*.jar,"
+                + System.getenv("HADOOP_PREFIX") + "/share/hadoop/common/lib/[^.].*.jar,"
+                + System.getenv("HADOOP_PREFIX") + "/share/hadoop/hdfs/[^.].*.jar,"
+                + System.getenv("HADOOP_PREFIX") + "/share/hadoop/mapreduce/[^.].*.jar";
         appendProp(fileWriter, Property.GENERAL_CLASSPATHS, cp, siteConfig);
         appendProp(fileWriter, Property.GENERAL_DYNAMIC_CLASSPATHS, libDir.getAbsolutePath(), siteConfig);
 
@@ -266,43 +262,6 @@ public class MiniAccumuloCluster {
         fileWriter.close();
 
     }
-
-    public static void copyFileOrDirectory(File src, File dest)
-            throws IOException{
-
-        if(src.isDirectory()){
-
-            //if directory not exists, create it
-            if(!dest.exists()){
-                dest.mkdir();
-         }
-
-            for (String file :  src.list()) {
-                //construct the src and dest file structure
-                File srcFile = new File(src, file);
-                File destFile = new File(dest, file);
-                //recursive copy
-                copyFileOrDirectory(srcFile, destFile);
-            }
-
-        }else{
-            //if file, then copy it
-            //Use bytes stream to support all file types
-            InputStream in = new FileInputStream(src);
-            OutputStream out = new FileOutputStream(dest);
-
-            byte[] buffer = new byte[1024];
-
-            int length;
-            //copy the file content in bytes
-            while ((length = in.read(buffer)) > 0){
-                out.write(buffer, 0, length);
-            }
-            in.close();
-            out.close();
-        }
-    }
-
 
     /**
      * Starts Accumulo and Zookeeper processes. Can only be called once.
