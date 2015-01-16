@@ -13,8 +13,8 @@
     </description>
 
     <properties>
-        <accumulo.version>1.5.0</accumulo.version>
-        <zookeeper.version>3.4.5-cdh4.6.0</zookeeper.version>
+        <accumulo.version>1.5.1</accumulo.version>
+        <zookeeper.version>3.4.5-cdh4.5.0</zookeeper.version>
     </properties>
 
     <dependencies>
